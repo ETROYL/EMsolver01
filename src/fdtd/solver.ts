@@ -363,30 +363,10 @@ export class Fdtd2D {
     if (this.mode === 'TMz') this.updateE_TM(); else this.updateE_TE();
     for (const s of this.eSources) s.arr[s.k] += s.w[n];
 
-    for (const p of this.ports) {
-      let v = 0, currentSum = 0;
-      for (let q = 0; q < p.edges.length; q++) {
-        const e = p.edges[q];
-        const f = this.fields[e.comp]!;
-        const edgeV = 0.5 * (p.eOld[q] + f[e.k]) * e.len;
-        v += edgeV;
-        const branchVs = p.vs[n] * e.sourceV;
-        currentSum += (branchVs - edgeV) / e.branchR;
-        // The branch source is already included implicitly by the modified
-        // electric-field coefficient/source term below. The field update
-        // itself is completed here using the known generator waveform.
-        f[e.k] += (this.dt / (e.branchR * this.averageMaterial(
-          this.eMaterialSamples(e.comp, Math.floor(e.k / this.ny), e.k % this.ny),
-        ).eps * (1 + 0))) * 0;
-      }
-      p.v[n] = v;
-      p.i[n] = currentSum / p.edges.length;
-    }
-
     // Apply the distributed Thévenin source after the standard E update.
-    // The source term is equivalent to a series source/resistor on each
-    // Yee edge; voltage and resistance are evenly distributed along a
-    // multi-edge series gap.
+    // The source voltage and resistance are evenly distributed along a
+    // multi-edge series gap, following the standard distributed Thévenin
+    // source construction.
     for (const p of this.ports) {
       for (const e of p.edges) {
         const f = this.fields[e.comp]!;
@@ -397,6 +377,22 @@ export class Fdtd2D {
         const sourceCoeff = this.dt / (e.branchR * props.eps * e.area * (1 + a));
         f[e.k] += sourceCoeff * p.vs[n] * e.sourceV;
       }
+    }
+
+    // Voltage and current are measured after the source contribution, using
+    // the same half-step convention as the generator waveform.
+    for (const p of this.ports) {
+      let v = 0, currentSum = 0;
+      for (let q = 0; q < p.edges.length; q++) {
+        const e = p.edges[q];
+        const f = this.fields[e.comp]!;
+        const edgeV = 0.5 * (p.eOld[q] + f[e.k]) * e.len;
+        v += edgeV;
+        const branchVs = p.vs[n] * e.sourceV;
+        currentSum += (branchVs - edgeV) / e.branchR;
+      }
+      p.v[n] = v;
+      p.i[n] = currentSum / p.edges.length;
     }
 
     for (const e of this.edges) {
