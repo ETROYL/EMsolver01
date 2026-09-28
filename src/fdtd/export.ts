@@ -5,7 +5,7 @@ export function exportJSON(sim: Fdtd2D): string {
   const n = sim.step;
   return JSON.stringify({
     format: 'tinyem2d-v1',
-    notes: 'Port samples at t=(n+0.5)*dt. V = port voltage, I = (Vs-V)/R flowing into structure. Probe sample s at t=(s+1)*every*dt (E) / (s+1.5)*every*dt approx (H at half step). Probe data layout [sample][point][component].',
+    notes: 'Port samples at t=(n+0.5)*dt. V is the line-integrated feed-gap voltage and I is the distributed Thevenin branch current. Probe E components are sampled at t=(s+1)*every*dt; H components are staggered by -dt/2. Use t_e and t_h for component-specific timing.',
     config: sim.cfg,
     dt: sim.dt, dtMax: sim.dtMax, stepsCompleted: n,
     ports: sim.ports.map((p) => ({
@@ -17,7 +17,8 @@ export function exportJSON(sim: Fdtd2D): string {
       const ns = Math.min(p.nSamples, Math.floor(n / p.every));
       return {
         name: p.name, components: p.components, every: p.every, points: p.coords,
-        t: Array.from({ length: ns }, (_, s) => (s + 1) * p.every * sim.dt),
+        t_e: Array.from({ length: ns }, (_, s) => (s + 1) * p.every * sim.dt),
+        t_h: Array.from({ length: ns }, (_, s) => (s + 1) * p.every * sim.dt - 0.5 * sim.dt),
         data: Array.from(p.data.subarray(0, ns * p.idx.length * p.components.length)),
       };
     }),
