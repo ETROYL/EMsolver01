@@ -418,11 +418,13 @@ export class Fdtd2D {
       if (b.ymin === 'pmc') for (let i = 0; i < this.nx; i++) hx[i * this.ny] = 0;
       if (b.ymax === 'pmc') for (let i = 0; i < this.nx; i++) hx[i * this.ny + this.ny - 2] = 0;
     } else {
-      const ex = this.fields.Ex!, ey = this.fields.Ey!;
-      if (b.xmin === 'pmc') for (let j = 0; j < this.ny; j++) ex[j] = 0;
-      if (b.xmax === 'pmc') for (let j = 0; j < this.ny; j++) ex[(this.nx - 1) * this.ny + j] = 0;
-      if (b.ymin === 'pmc') for (let i = 0; i < this.nx; i++) ey[i * this.ny] = 0;
-      if (b.ymax === 'pmc') for (let i = 0; i < this.nx; i++) ey[i * this.ny + this.ny - 1] = 0;
+      // In TEz, Hz is tangential to every x/y boundary, so PMC requires
+      // the boundary-adjacent Hz samples to be zero.
+      const hz = this.fields.Hz!;
+      if (b.xmin === 'pmc') for (let j = 0; j < this.ny - 1; j++) hz[j] = 0;
+      if (b.xmax === 'pmc') for (let j = 0; j < this.ny - 1; j++) hz[(this.nx - 2) * this.ny + j] = 0;
+      if (b.ymin === 'pmc') for (let i = 0; i < this.nx - 1; i++) hz[i * this.ny] = 0;
+      if (b.ymax === 'pmc') for (let i = 0; i < this.nx - 1; i++) hz[i * this.ny + this.ny - 2] = 0;
     }
   }
 
