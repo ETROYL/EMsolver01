@@ -1,143 +1,102 @@
-# Shadcn-UI Template Usage Instructions
+# TinyEM 2D FDTD Solver
 
-## technology stack
+TinyEM is a browser-based 2D electromagnetic simulator implementing TMz and TEz finite-difference time-domain (FDTD) updates on a Yee grid.
 
-This project is built with:
+> **Status:** research/prototype software. The numerical engine is implemented, but it is not yet validated against analytical/reference cases sufficiently to support quantitative antenna-design claims.
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+## Features
 
-All shadcn/ui components have been downloaded under `@/components/ui`.
+- TMz: Ez, Hx, Hy
+- TEz: Ex, Ey, Hz
+- CFL-limited time stepping
+- Lossy isotropic materials with relative permittivity, permeability and conductivity
+- PEC, PMC and first-order Mur outer boundaries
+- Rasterised box, circle, polygon, line and cell geometry
+- Gaussian, Ricker and CW excitations
+- Explicit multi-edge feed gaps with finite Thévenin resistance
+- Point and line probes
+- FFT-based impedance, reflection coefficient, S11 and VSWR post-processing
+- JSON/CSV result export
 
-## File Structure
+## Numerical model
 
-- `index.html` - HTML entry point
-- `vite.config.ts` - Vite configuration file
-- `tailwind.config.ts` - Tailwind CSS configuration file
-- `package.json` - NPM dependencies and scripts
-- `src/main.tsx` - Project entry point
-- `src/App.tsx` - Router shell (imports pages and sets up routes)
-- `src/pages/Index.tsx` - Main page entry point for `/` by default; replace the placeholder page here unless you explicitly reroute `/` elsewhere
-- `src/index.css` - Existing CSS configuration
+The solver uses compact typed-array storage, while constitutive coefficients are evaluated at the corresponding staggered Yee locations. Electric material parameters are locally averaged from surrounding material samples; magnetic parameters are evaluated at the magnetic-field locations. Internal PEC regions force the corresponding tangential electric-field update coefficients to zero.
 
-## Components
+Finite-resistance ports are modelled as distributed Thévenin sources over the declared feed gap. For a multi-edge gap, the source voltage and resistance are distributed in series across the edges. Port voltage is obtained from the discrete line integral of the electric field and port current from the source circuit relation.
 
-- All shadcn/ui components are pre-downloaded and available at `@/components/ui`
+These are still grid-based approximations. Geometry is staircased/rasterised, and sub-cell conformal modelling is not implemented.
 
-## Styling
+## Boundaries
 
-- Add global styles to `src/index.css` or create new CSS files as needed
-- Use Tailwind classes for styling components
+- **Mur:** first-order absorbing boundary; useful for prototype work but not equivalent to a PML.
+- **PEC:** tangential electric field is forced to zero at the selected outer boundary.
+- **PMC:** the appropriate tangential-H / normal-E condition is explicitly enforced for the selected 2D mode.
 
-## Design workflow
+A PML is **not** implemented yet.
 
-For a new frontend, create `DESIGN.md` before writing application code:
+## Port and S-parameter interpretation
 
-1. If `DESIGN.md` already exists, read and follow it instead of overwriting it.
-2. Otherwise, derive the design from the original requirement and supplied theme or references. Use the workspace-relative path `DESIGN.md`, without another design file.
-3. Keep the design concise without omitting concrete, requirement-specific visual decisions. Do not spend tool calls counting tokens.
-4. Implement the smallest complete product using this specification. Do not reread a file you just wrote unless exact text is needed later.
+The default example contains an actual PEC feed gap rather than placing the port inside a continuous PEC object.
 
-### Design principles
+The port resistance is the physical Thévenin source resistance. `output.z0` is the wave-reference impedance used when converting the computed port impedance to S11:
 
-**DESIGN.md turns vague aesthetic preferences into concrete constraints the Agent can implement.**
+```
+Z(f) = V(f) / I(f)
+Gamma(f) = (Z(f) - Z0) / (Z(f) + Z0)
+S11(dB) = 20 log10(|Gamma|)
+```
 
-- Color sets the mood, typography sets the voice, radii define the shape language, components enable reuse, layout establishes rhythm, and do/don't rules keep the design on course.
-- **Precision and control improve visual quality.** Specify HEX colors, pixel values, font weights, radii, and spacing rhythms so the implementation is attractive and consistent.
-- Good design comes from **coordinated choices** across color, type, spacing, radii, and hierarchy. Decide what the product should and should not feel like before specifying individual elements; adding features is not a substitute.
+Broadband results are only meaningful when the time record is long enough for the transient to decay, the feed is adequately resolved, and the spatial mesh is sufficiently fine for the highest frequency/material wavelength of interest.
 
-### Be bold, creative, and distinctive
+## Time sampling
 
-**Pursue a recognizable visual identity.** Make confident, memorable choices without sacrificing usability or accessibility:
-
-1. **Choose expressive colors**: Go beyond neutral gray with a small primary-color accent. Select a palette with mood and identity: saturated contrasts, large areas drenched in brand color, or carefully tuned warm/cool neutrals with an unexpected accent. Provide a complete color scale while maintaining contrast and a 60/30/10 visual balance.
-2. **Choose typography deliberately**: Avoid reflexively picking overused safe fonts such as Inter or default serif display faces. Match the product's voice with fonts that have distinctive x-heights, stroke contrast, or terminals; headings may use a strong display face. Name specific web fonts that can be loaded for free.
-3. **Give the layout a point of view**: Do not default to centered stacks of cards. Consider asymmetric compositions (70/30 or 80/20 columns), rhythmic whitespace, one dominant visual per screen, or an explicit Swiss/brutalist grid. Give the hero a clear visual statement instead of an undistinguished centered column.
-4. **Avoid generic AI aesthetics without overcorrecting**:
-   - Avoid these overused defaults: dark backgrounds with blue-purple gradients, cards with colored left borders, excessive glassmorphism, or warm beige with serif headings and spacious editorial layouts applied to every product.
-   - These are **not absolute bans**. If the industry or context calls for a style, use it and explain in `Direction & Layout` why it fits this specific product. A space or technology product may suit a cool dark palette; a literary magazine may suit beige and serifs. Avoid choices made by default without a reason.
-   - **For blue, indigo, or purple primary palettes**, avoid the generic AI-product look: Orbitron/Exo/Rajdhani-style technology fonts, glowing or gradient-bordered cards, and dashboard layouts combining icon grids with monospace type. These colors can instead feel academic, oceanic, nocturnal, luxurious, or calmly restrained.
-
-**Bold choices must form a coherent system**: colors, type, spacing, and radii should work together and follow the product's industry, audience, and mood. Do not add effects merely to show off. Preserve usability, readability, and accessibility.
-
-### Let the product determine the style
-
-Before writing the specification, choose an **explicit visual direction** and record it in `Direction & Layout`:
-
-1. **Use the industry and context to guide the emphasis**. These examples illustrate the reasoning; do not copy them mechanically:
-   - Finance / trading / data tools: high information density, calm restraint, possibly dark or neutral colors, sans-serif type, minimal decoration.
-   - Developer tools / technical communities: monospace accents, clear contrast, function first, possibly a dark palette.
-   - Children / games / education: saturated colors, rounded forms, playful illustrations, expressive motion.
-   - Luxury / fashion: strong contrast, large imagery, minimalism, possibly pure black and white.
-   - Travel / lifestyle / content: photography-led, warm, potentially editorial.
-   - Marketing landing pages: a strong hero, distinctive primary color, conversion-focused hierarchy.
-2. **Do not assume a background palette**: pure white, warm white, cool gray, dark colors, brand colors, gradients, and imagery are all candidates. Choose based on the product's character.
-3. **Do not assume a type category**: serif, grotesk, geometric sans, humanist sans, mono, and display are all candidates. Choose based on the product's voice.
-4. Ask: **"Would this DESIGN.md still fit if I replaced the product name with one from a completely different industry?"** If so, it is too generic; revise it to make the decisions specific to this product.
-
-Specify concrete HEX values, font sizes/weights/line heights, spacing, radii, and relevant motion duration/easing rather than aesthetic adjectives alone.
-
-### Required DESIGN.md structure
-
-Use the following four sections with `##` headings. Cover every category below with concrete, product-specific decisions; briefly explain anything that does not apply. Record each decision once and reference shared tokens. Do not add alternatives, requirement recaps, tutorials, code samples, or repeated page-by-page specifications.
-
-- `Direction & Layout`:
-  - Define the product's purpose, mood, first visual signal, and what it should and should not feel like. Name one defining visual idea implemented in the first screen and one concrete visual reference (supplied first; never claim to have inspected an unopened reference).
-  - Specify the focal point, information hierarchy, hero composition, maximum content width, grid columns, content density, section spacing, card gaps, and whitespace rhythm. Give brand surfaces identity while keeping operational controls and product comparisons predictable.
-  - Define mobile/tablet/desktop breakpoints and how the hero, navigation, and grids rearrange, padding changes, and image ratios adapt.
-  - Include explicit do/don't rules: required visual features, prohibited colors or usages, unacceptable component substitutions, and layouts or generic AI styles to avoid for this product.
-- `Tokens`:
-  - Colors: provide HEX values and semantic uses for primary/accent colors, backgrounds, surface layers, text hierarchy, and status colors. State where accents should remain scarce and include light/dark variants only when applicable.
-  - Typography: name available, freely loadable fonts with fallbacks and describe their character. Specify font family, size, weight, and line height for headings, body text, buttons, and captions, including display scale and text density.
-  - Spacing and shapes: define the spacing scale and concrete radii for required buttons, cards, images, and inputs; state whether icon buttons are circular and describe the overall shape language.
-  - Elevation and depth: define how borders, shadows, color blocks, blur, or glass effects establish hierarchy. Give applicable border/shadow values and layering rules for overlays and sticky elements.
-- `Shared Patterns & States`:
-  - List only the core reusable components and layouts this product needs. For each, define its purpose, meaningful variants, background, typography, radius, padding, border/shadow, and prohibited misuse by referring to shared tokens.
-  - Specify applicable hover, active, disabled, loading, empty, and error states and required interactions. Do not invent components or states merely to fill a checklist.
-  - Motion: define its intensity, duration, and easing, how required hover/press, accordion, carousel, or reveal interactions move, and where motion is inappropriate. Keep primary content visible on initial render, including when scrolling or animation scripts do not run.
-  - Accessibility: specify minimum click/tap target sizes, contrast requirements, focus-ring styling, keyboard navigation, accessible names for icon buttons, and form error feedback where applicable.
-- `Media`:
-  - Plan relevant imagery for visually led pages even without an explicit image request. State whether real imagery is essential and choose photography, illustration, 3D, screenshots, avatars, or data graphics as appropriate. Explicitly state whether abstract gradients or SVG substitutes are acceptable.
-  - Record each needed asset's purpose, source, style, aspect ratio/crop, placement, full-bleed behavior, and text-overlay constraints; reuse shared direction rather than duplicating long descriptions.
-  - Respect supplied designs/assets, prioritize the main visual, and choose quantity by content needs, not a fixed quota. Generate missing assets with the `image-generation` Skill and use the completed assets; verify references and placement before delivery. Operational interfaces may briefly explain why imagery is unnecessary.
-
-Keep all requested capabilities and their necessary implementation details, but do not add routes, features, entities, controls, or files merely to make the product seem more complete. Reuse patterns with data/configuration; do not replace required differences with generic placeholders.
-
-Primary content must be visible on initial render; do not depend on scrolling or `IntersectionObserver` to remove default `opacity: 0` or `visibility: hidden` states. In the existing validation pass, check the first-screen focal point, defining idea, usability, and mobile hierarchy. Fix concrete mismatches without adding a separate design-review loop or claiming unperformed visual checks.
+Electric and magnetic fields are staggered in time by half a timestep. Exported probe data therefore contains separate `t_e` and `t_h` axes. Port voltage/current histories are sampled consistently at the source half-step.
 
 ## Development
 
-- Import components from `@/components/ui` in your React components
-- Customize the UI by modifying the Tailwind configuration
-- Do not stop after editing isolated components or only `src/App.tsx`. The default template homepage lives in `src/pages/Index.tsx`, and leaving `Welcome to Atoms` there means the app is still unfinished.
-- Completion check: either replace `src/pages/Index.tsx` with your real homepage, or update the `/` route in `src/App.tsx` so the live homepage no longer renders the default placeholder page.
+This repository is the **app project root**. Run development commands from this directory.
 
-## Note
+The repository contains a `pnpm-lock.yaml`, so pnpm is the reproducible package-manager path:
 
-- The `@/` path alias points to the `src/` directory
-- Do NOT modify the title, description, and logo in `index.html` — they are managed by the overview system via `data-mgx-overview` markers.
-- Do not design or generate browser favicon assets for ordinary development or branding requests. Only do so when the user explicitly asks for favicon customization or provides an image for that purpose; this does not restrict in-page brand logo design.
-
-# Commands
-
-**Install Dependencies**
-
-```shell
-pnpm i
-```
-
-**Start Preview**
-
-```shell
+```bash
+pnpm install
 pnpm run dev
-```
-
-**To build**
-
-```shell
 pnpm run build
+pnpm run lint
 ```
- 
+
+npm can also execute the package scripts, but do not mix package managers in the same working tree unless you intentionally regenerate the lockfile.
+
+For a local browser session, open:
+
+```
+http://localhost:3000/
+```
+
+## Project structure
+
+```text
+prerender/          Blog prerendering and sitemap helpers
+public/             Static assets
+src/fdtd/           FDTD engine, geometry, waveforms and post-processing
+src/pages/          React application pages
+src/components/     UI components
+src/lib/             Shared configuration/blog utilities
+vite.config.ts      Vite configuration
+package.json        Dependencies and scripts
+pnpm-lock.yaml      Reproducible pnpm dependency lockfile
+```
+
+## Validation roadmap
+
+Before using TinyEM for quantitative antenna or GPR work, validate at minimum:
+
+1. homogeneous-medium plane-wave propagation and numerical dispersion;
+2. PEC reflection;
+3. dielectric-interface Fresnel reflection/transmission;
+4. Mur reflection versus distance/incidence angle;
+5. feed-gap voltage/current against a known simple load;
+6. impedance/S11 against an analytical or trusted reference;
+7. mesh/time-step convergence.
+
+The current implementation is deliberately kept 2D. PML, far-field transformation, directivity/gain, and general multiport S-parameter studies remain future work rather than silently being presented as implemented capabilities.
