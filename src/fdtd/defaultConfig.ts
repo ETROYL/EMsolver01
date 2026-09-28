@@ -11,12 +11,14 @@ export const defaultConfig: SimConfig = {
     { name: 'dielectric', epsR: 4.4, muR: 1, sigma: 0.002 },
   ],
   geometry: [
-    { type: 'line', material: 'copper', x0: 0.1, y0: 0.07, x1: 0.1, y1: 0.13 },
+    // Physical feed gap: the PEC dipole is split into two arms around y=0.1 m.
+    { type: 'line', material: 'copper', x0: 0.1, y0: 0.07, x1: 0.1, y1: 0.099 },
+    { type: 'line', material: 'copper', x0: 0.1, y0: 0.101, x1: 0.1, y1: 0.13 },
     { type: 'circle', material: 'dielectric', cx: 0.145, cy: 0.1, r: 0.015 },
   ],
   sources: [],
   ports: [
-    { name: 'P1', x: 0.1, y: 0.1, orientation: 'y', resistance: 50, waveform: { type: 'gaussian', amplitude: 1, t0: 2.4e-10, width: 6e-11 } },
+    { name: 'P1', x: 0.1, y: 0.099, x1: 0.1, y1: 0.101, orientation: 'y', resistance: 50, waveform: { type: 'gaussian', amplitude: 1, t0: 2.4e-10, width: 6e-11 } },
   ],
   probes: [
     { name: 'pt1', type: 'point', x: 0.05, y: 0.1, components: ['Ey', 'Hz'], every: 1 },
