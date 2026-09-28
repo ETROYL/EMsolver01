@@ -33,8 +33,12 @@ export interface Source {
 
 export interface Port {
   name: string;
+  /** Start terminal coordinate. For x/y ports this is the first end of the physical feed gap. */
   x: number;
   y: number;
+  /** Optional second terminal. Defaults to one Yee edge in the port orientation. */
+  x1?: number;
+  y1?: number;
   orientation: 'x' | 'y' | 'z';
   resistance: number;
   waveform: Waveform;
