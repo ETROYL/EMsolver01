@@ -283,7 +283,14 @@ export class Fdtd2D {
       const arr = this.fields[s.component];
       if (!arr) throw new Error(`Source component ${s.component} not available in ${this.mode} mode.`);
       const isH = s.component[0] === 'H';
-      const st = { arr, k: this.node(s.x, s.y, 'Source'), w: sampleWaveform(s.waveform, this.steps, this.dt, isH ? 1 : 0.5) };
+      const k = this.node(s.x, s.y, 'Source');
+      if (!isH) {
+        const i = Math.floor(k / this.ny), j = k % this.ny;
+        if (this.averageMaterial(this.eMaterialSamples(s.component, i, j)).pec) {
+          throw new Error(`Source ${s.component} lies on PEC geometry.`);
+        }
+      }
+      const st = { arr, k, w: sampleWaveform(s.waveform, this.steps, this.dt, isH ? 1 : 0.5) };
       (isH ? this.hSources : this.eSources).push(st);
     }
   }
