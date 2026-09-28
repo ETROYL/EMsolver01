@@ -2,6 +2,7 @@
 import react from '@vitejs/plugin-react-swc';
 import fs from 'node:fs';
 import path from 'path';
+import { fileURLToPath } from 'node:url';
 import { viteSourceLocator } from '@metagptx/vite-plugin-source-locator';
 import { atoms } from '@metagptx/web-sdk/plugins';
 import { vitePrerenderPlugin } from 'vite-prerender-plugin';
@@ -24,8 +25,10 @@ process.env.VITE_APP_TITLE = escapeHtmlAttr(process.env.VITE_APP_TITLE);
 process.env.VITE_APP_DESCRIPTION = escapeHtmlAttr(process.env.VITE_APP_DESCRIPTION);
 process.env.VITE_APP_LOGO_URL ??= process.env.OVERVIEW_LOGO_URL ?? 'https://public-frontend-cos.metadl.com/mgx/img/favicon_atoms.ico';
 
+const projectDir = path.dirname(fileURLToPath(import.meta.url));
+
 function ensureBuildOutDir() {
-  let outDir = path.resolve(__dirname, 'dist');
+  let outDir = path.resolve(projectDir, 'dist');
 
   return {
     name: 'ensure-build-out-dir',
@@ -51,7 +54,7 @@ export default defineConfig(({ command }) => {
       atoms(),
       ensureBuildOutDir(),
       Sitemap({
-        hostname: 'https://atoms.template.com',
+        hostname: process.env.VITE_SITE_URL ?? 'http://localhost:3000',
         lastmod: getSitemapLastmod(),
         readable: true,
         generateRobotsTxt: true,
