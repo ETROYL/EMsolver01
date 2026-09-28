@@ -1,5 +1,5 @@
- {
-  "name": "shadcnui",
+{
+  "name": "tinyem-2d",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -90,5 +90,6 @@
     "vite": "^5.4.1",
     "vite-plugin-sitemap": "^0.8.2",
     "vite-prerender-plugin": "^0.5.13"
-  }
+  },
+  "packageManager": "pnpm@9"
 }
